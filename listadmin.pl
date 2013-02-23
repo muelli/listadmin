@@ -365,13 +365,20 @@ _end_
 	while (1) {
 	    my $ans;
 	    my $match = "";
+	    my $matching_re = "";
+	    my $matching_re_tmp = ""; # This is because I don't understand PERL well
 	    if ($spamlevel && $spamscore >= $spamlevel) {
 		$match = "spam"; $ans = "d";
 	    }
 	    $ans ||= $config->{"action"};
-	    $match = "From" if got_match ($from, $dis_from);
+	    $match = "From"
+	        if $dis_from &&
+	            ($matching_re_tmp = got_match ($from, $dis_from)) &&
+	            ($matching_re = $matching_re_tmp);
 	    $match = "Subject"
-		    if $dis_subj && got_match ($subject, $dis_subj);
+		    if $dis_subj &&
+		        ($matching_re_tmp = got_match ($subject, $dis_subj)) &&
+	            ($matching_re = $matching_re_tmp);
 	    $match = "reason"
 		    if $dis_reas && got_match ($reason, $dis_reas);
 	    $ans ||= "d" if $match;
@@ -384,6 +391,7 @@ _end_
 		    print "Automatically discarded as spam.\n";
 		} else {
 		    print "Automatically discarded due to matching $match\n";
+		    print "Matching RE: \"$matching_re\"\n";
 		}
 		$ans = "d";
 	    }
@@ -2012,7 +2020,7 @@ sub got_match {
 
     foreach my $pattern (@$patterns) {
         my $match = 0;
-
+        
         # If the pattern is delimited by slashes, run it directly ...
         if ($pattern =~ m,^/(.*)/([ix]*)$,) {
             eval "\$match = \$str =~ $pattern";
@@ -2021,7 +2029,7 @@ sub got_match {
         }
 
         if ($match) {
-            return $match
+            return "$pattern";
         }
     }
 }
