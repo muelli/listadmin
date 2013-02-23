@@ -315,6 +315,8 @@ sub approve_messages {
     my $spamlevel = $config->{"spamlevel"};
     my $ns_from = $config->{"not_spam_if_from"};
     my $ns_subj = $config->{"not_spam_if_subject"};
+    my $acc_from = $config->{"accept_if_from"};
+    my $acc_subj = $config->{"accept_if_subject"};
     my $dis_from = $config->{"discard_if_from"};
     my $dis_subj = $config->{"discard_if_subject"};
     my $dis_reas = $config->{"discard_if_reason"};
@@ -365,36 +367,59 @@ _end_
 	while (1) {
 	    my $ans;
 	    my $match = "";
+	    my $acc_match = "";
+	    my $dis_match = "";
 	    my $matching_re = "";
 	    my $matching_re_tmp = ""; # This is because I don't understand PERL well
 	    if ($spamlevel && $spamscore >= $spamlevel) {
-		$match = "spam"; $ans = "d";
+		$dis_match = "spam"; $ans = "d";
 	    }
 	    $ans ||= $config->{"action"};
-	    $match = "From"
+	    $dis_match = "From"
 	        if $dis_from &&
 	            ($matching_re_tmp = got_match ($from, $dis_from)) &&
 	            ($matching_re = $matching_re_tmp);
-	    $match = "Subject"
+	    $dis_match = "Subject"
 		    if $dis_subj &&
 		        ($matching_re_tmp = got_match ($subject, $dis_subj)) &&
 	            ($matching_re = $matching_re_tmp);
-	    $match = "reason"
+	    $dis_match = "reason"
 		    if $dis_reas && got_match ($reason, $dis_reas);
-	    $ans ||= "d" if $match;
+	    $ans ||= "d" if $dis_match;
 	    $ans = undef if (($ns_subj && got_match($subject, $ns_subj)) ||
 			     ($ns_from && got_match($from, $ns_from)) ||
 			     $dont_skip_forward);
 
-	    if ($ans && $match) {
-		if ($match eq "spam") {
+	    if ($ans && $dis_match) {
+		if ($dis_match eq "spam") {
 		    print "Automatically discarded as spam.\n";
 		} else {
-		    print "Automatically discarded due to matching $match\n";
+		    print "Automatically discarded due to matching $dis_match\n";
 		    print "Matching RE: \"$matching_re\"\n";
 		}
 		$ans = "d";
 	    }
+
+
+	    $acc_match = "From"
+	        if $acc_from &&
+	            ($matching_re_tmp = got_match ($from, $acc_from)) &&
+	            ($matching_re = $matching_re_tmp);
+	    $acc_match = "Subject"
+		    if $acc_subj &&
+		        ($matching_re_tmp = got_match ($subject, $acc_subj)) &&
+	            ($matching_re = $matching_re_tmp);
+
+	    if ($acc_match) {
+		    print "Automatically accepted due to matching $acc_match\n";
+		    print "Matching RE: \"$matching_re\"\n";
+		    $ans = "a";
+	    }
+	    
+	    # $match is used later, so we set it to either value
+	    $match = $acc_match || $dis_match;
+
+
 	    my $def = $listdef;
 	    $def = $change->{$id}->[0]
 		    if defined $change->{$id};
@@ -1407,6 +1432,8 @@ sub read_config {
     my %cur = map { $_ => []; }
 	    qw (not_spam_if_from
 		not_spam_if_subject
+		accept_if_from
+		accept_if_subject
 		discard_if_from
 		discard_if_subject
 		discard_if_reason);
