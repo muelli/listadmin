@@ -18,6 +18,8 @@ use LWP::UserAgent;
 use MIME::Base64;
 use MIME::QuotedPrint;
 use Data::Dumper;
+use Term::ANSIColor;
+use Term::ANSIColor qw(:constants :pushpop);
 use Term::ReadLine;
 use Getopt::Long;
 use Text::Reform;
@@ -212,7 +214,30 @@ for (@lists) {
     if ($config->{$list}->{"confirm"}) {
 	if (scalar %change) {
 	redo_confirm:
-	    my $c = prompt ("Submit changes? [yes] ");
+	    my $accepts = 0;
+	    my $discards = 0;
+	    
+	    for my $id (sort { $a <=> $b } keys %change) {
+	        my ($what, $text) = @{$change{$id}};
+	        if ($what eq "a") {$accepts++};
+	        if ($what eq "d") {$discards++};
+	    }
+	    my $accept_prompt = "(A: $accepts)";
+	    $accept_prompt = colored($accept_prompt, "green") if ($accepts > 0);
+
+	    my $discard_prompt = "(D: $discards)";
+	    $discard_prompt = colored($discard_prompt, "red") if ($discards > 0);
+	    
+	    print "\n";
+	    # We push the UNDERLINE because PUSHCOLOR *needs* color specs in 
+	    # the text, but $accept_prompt might be plain.
+	    print PUSHCOLOR UNDERLINE "Submit changes? ";
+	    print PUSHCOLOR UNDERLINE $accept_prompt;
+	    print POPCOLOR " ";
+	    print PUSHCOLOR UNDERLINE $discard_prompt;
+	    print POPCOLOR " ";
+	    print POPCOLOR;
+	    my $c = prompt ( " [yes] ");
 	    if ($c =~ /^\s*(\?+|h|hj?elp)\s*$/i) {
 		print <<_END_;
 Nothing will be done to the messages in the administrative queue
@@ -392,9 +417,9 @@ _end_
 
 	    if ($ans && $dis_match) {
 		if ($dis_match eq "spam") {
-		    print "Automatically discarded as spam.\n";
+		    print color("Automatically discarded as spam.\n", "red");
 		} else {
-		    print "Automatically discarded due to matching $dis_match\n";
+		    print colored("Automatically discarded due to matching $dis_match\n", "red");
 		    print "Matching RE: \"$matching_re\"\n";
 		}
 		$ans = "d";
@@ -411,7 +436,7 @@ _end_
 	            ($matching_re = $matching_re_tmp);
 
 	    if ($acc_match) {
-		    print "Automatically accepted due to matching $acc_match\n";
+		    print colored("Automatically accepted due to matching $acc_match\n", "green");
 		    print "Matching RE: \"$matching_re\"\n";
 		    $ans = "a";
 	    }
