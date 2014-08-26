@@ -1245,7 +1245,7 @@ sub decode_rfc2047_qp {
     my ($charset, $encoded_word) = @_;
     my $text = $encoded_word;
     $text =~ s/_/ /g;
-    $text = MIME::QuotedPrint::decode($text);
+    eval { $text = MIME::QuotedPrint::decode($text) };
     $charset = guess_charset($charset, $text);
     eval { $text = Encode::decode($charset, $text) };
     return defined $text ? $text : $encoded_word;
