@@ -1559,7 +1559,7 @@ sub read_config {
 		$val =~ s/\\"/"/g;
 		$val =~ s/\\\\/\\/g;
 	    }
-	    push($cur{$key}, ($val eq "NONE") ? undef : $val);
+	    push(@{$cur{$key}}, ($val eq "NONE") ? undef : $val);
 	} elsif ($line =~ /^spamheader\s+/) {
 	    $cur{spamheader} = unquote($POSTMATCH);
 	    unless ($cur{spamheader} =~ /^[\w-]+$/) {
